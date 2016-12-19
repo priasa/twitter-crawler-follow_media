@@ -1,0 +1,48 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+	
+	<bean id="cachedConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+		<property name="targetConnectionFactory" ref="amqConnectionFactory" />
+		<property name="sessionCacheSize" value="30" />
+	</bean>
+	
+	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+		<property name="brokerURL" value="tcp://smarta:61616" /> 
+		<!--<property name="brokerURL" value="tcp://localhost:61616" />-->
+		<property name="userName" value="smx"/>
+		<property name="password" value="smx"/>
+	</bean>
+	
+	<bean id="twitterService" class="id.smarta.krakatau.streamer.twitter.TwitterServiceImpl">
+		<property name="taskExecutor" ref="taskExecutor" />
+		<property name="twitterReader" ref="twitterReader"/>
+	</bean>
+
+	<bean id="twitterReader" class="id.smarta.krakatau.streamer.twitter.TwitterReader">
+		<property name="twitterJmsTemplate" ref="twitterJmsTemplate"/>
+		<property name="taskExecutor" ref="taskExecutor" />
+	</bean>
+	
+	<bean id="twitterJmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="cachedConnectionFactory"/>
+		<property name="defaultDestination" ref="twitterRouterStep1Queue" />
+		<property name="receiveTimeout" value="30000"/>
+        <property name="timeToLive" value="30000"/> 
+	</bean>
+	
+	<bean id="twitterRouterStep1Queue" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg value="twitterFollowMedia1" />
+	</bean>
+	
+	<bean id="taskExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+		<property name="corePoolSize" value="100" />
+		<property name="maxPoolSize" value="100" />
+		<property name="queueCapacity" value="100" />
+		<property name="waitForTasksToCompleteOnShutdown" value="true" />
+	</bean>
+
+</beans>
